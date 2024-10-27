@@ -100,11 +100,11 @@ class training_class():
         # self.datasets_name = self.datasets_path.split("/")[-1]
         pth_name = self.datasets_name + '_' + datetime.datetime.now().strftime("%Y%m%d%H%M")
         self.pth_path = self.pth_dir + '/' + pth_name
-        self.onnx_path = self.onnx_dir + '/' + pth_name
+        # self.onnx_path = self.onnx_dir + '/' + pth_name
         if not os.path.exists(self.pth_path):
             os.makedirs(self.pth_path)
-        if not os.path.exists(self.onnx_path):
-            os.makedirs(self.onnx_path)
+        # if not os.path.exists(self.onnx_path):
+            # os.makedirs(self.onnx_path)
         if not os.path.exists(self.output_dir):
             os.mkdir(self.output_dir)
 
@@ -357,15 +357,15 @@ class training_class():
             torch.save(self.local_model.module.state_dict(), model_save_name)  # parallel
         else:
             torch.save(self.local_model.state_dict(), model_save_name)  # not parallel
-        if not self.colab_display:
-            # covert pth to onnx
-            onnx_save_name = self.onnx_path + '//E_' + str(epoch + 1).zfill(2) + '_Iter_' + str(iteration + 1).zfill(
-                4) + '_Patch_'+ str(self.patch_x) + '_' + str(self.patch_y) + '_' + str(self.patch_t) + '.onnx'
-            input_name = ['input']
-            output_name = ['output']
+        # if not self.colab_display:
+        #     # covert pth to onnx
+        #     onnx_save_name = self.onnx_path + '//E_' + str(epoch + 1).zfill(2) + '_Iter_' + str(iteration + 1).zfill(
+        #         4) + '_Patch_'+ str(self.patch_x) + '_' + str(self.patch_y) + '_' + str(self.patch_t) + '.onnx'
+        #     input_name = ['input']
+        #     output_name = ['output']
 
-            input = torch.randn(1, 1, self.patch_t, self.patch_x,  self.patch_y, requires_grad=True).cuda()
-            torch.onnx.export(self.local_model.module, input, onnx_save_name, export_params=True,input_names=input_name, output_names=output_name,opset_version=11, verbose=False)
+        #     input = torch.randn(1, 1, self.patch_t, self.patch_x,  self.patch_y, requires_grad=True).cuda()
+        #     torch.onnx.export(self.local_model.module, input, onnx_save_name, export_params=True,input_names=input_name, output_names=output_name,opset_version=11, verbose=False)
 
 
     def test(self, train_epoch, train_iteration):
