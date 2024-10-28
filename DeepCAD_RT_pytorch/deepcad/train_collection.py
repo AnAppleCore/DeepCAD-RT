@@ -138,7 +138,7 @@ class training_class():
            self.local_model: the denoise network
 
         """
-        denoise_generator = Network_3D_Unet(in_channels=1,
+        denoise_generator = Network_3D_Unet(in_channels=2,
                                             out_channels=1,
                                             f_maps=self.fmap,
                                             final_sigmoid=True)
@@ -174,6 +174,7 @@ class training_class():
         self.stack_index = []
         self.noise_im_all = []
         self.mask_im_all = []
+        self.mean_im_all = []
         ind = 0
         print('\033[1;31mImage list for training -----> \033[0m')
         self.stack_num = len(list(os.walk(self.datasets_path, topdown=False))[-1][-1])
@@ -200,6 +201,10 @@ class training_class():
             
             mask_im = generate_mask(noise_im.shape, ss_stride=self.ss_stride, mask_type=self.mask_type)
             self.mask_im_all.append(mask_im)
+
+            mean_im = np.mean(noise_im, axis=0)
+            self.mean_im_all.append(mean_im)
+
             patch_t2 = self.patch_t * 2
             for x in range(0, int((self.whole_y - self.patch_y + self.gap_y) / self.gap_y)):
                 for y in range(0, int((self.whole_x - self.patch_x + self.gap_x) / self.gap_x)):
@@ -286,7 +291,7 @@ class training_class():
         L1_pixelwise.cuda()
 
         for epoch in range(0, self.n_epochs):
-            train_data = trainset(self.name_list, self.coordinate_list, self.noise_im_all, self.stack_index, self.mask_im_all)
+            train_data = trainset(self.name_list, self.coordinate_list, self.noise_im_all, self.stack_index, self.mask_im_all, self.mean_im_all)
             trainloader = DataLoader(train_data, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
             for iteration, (input, target) in enumerate(trainloader):
                 # The input volume and corresponding target volume from data loader to train the deep neural network
@@ -390,15 +395,19 @@ class training_class():
         denoise_img = np.zeros(noise_img.shape)
         input_img = np.zeros(noise_img.shape)
         mask_img = generate_mask(noise_img.shape,ss_stride=self.ss_stride, mask_type=self.mask_type)
+        mean_img = np.mean(noise_img, axis=0)
         noise_img = noise_img * mask_img
-        test_data = testset(name_list, coordinate_list, noise_img)
+        test_data = testset(name_list, coordinate_list, noise_img, mean_img)
         testloader = DataLoader(test_data, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
-        for iteration, (noise_patch, single_coordinate) in enumerate(testloader):
+        for iteration, (noise_patch, single_coordinate, mean_patch) in enumerate(testloader):
             # Pre-trained models are loaded into memory and the sub-stacks are directly fed into the model.
             noise_patch = noise_patch.cuda()
+            mean_patch = mean_patch.cuda()
+            real_A_input = torch.cat((noise_patch, mean_patch), dim=1).detach()
             real_A = noise_patch
             real_A = Variable(real_A)
-            fake_B = self.local_model(real_A)
+            real_A_input = Variable(real_A_input)
+            fake_B = self.local_model(real_A_input)
 
             # Determine approximate time left
             batches_done = iteration

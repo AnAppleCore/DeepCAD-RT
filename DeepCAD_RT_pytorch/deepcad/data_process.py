@@ -60,12 +60,13 @@ class trainset(Dataset):
 
     """
 
-    def __init__(self, name_list, coordinate_list, noise_img_all, stack_index, mask_img_all):
+    def __init__(self, name_list, coordinate_list, noise_img_all, stack_index, mask_img_all, mean_img_all):
         self.name_list = name_list
         self.coordinate_list = coordinate_list
         self.noise_img_all = noise_img_all
         self.stack_index = stack_index
         self.mask_img_all = mask_img_all
+        self.mean_img_all = mean_img_all
 
     def __getitem__(self, index):
         """
@@ -81,6 +82,7 @@ class trainset(Dataset):
         stack_index = self.stack_index[index]
         noise_img = self.noise_img_all[stack_index]
         mask_img = self.mask_img_all[stack_index]
+        mean_img = self.mean_img_all[stack_index]
         single_coordinate = self.coordinate_list[self.name_list[index]]
         init_h = single_coordinate['init_h']
         end_h = single_coordinate['end_h']
@@ -102,7 +104,16 @@ class trainset(Dataset):
         mask = mask_img[init_s:end_s:2, init_h:end_h, init_w:end_w]
         input = input * mask
 
-        input = torch.from_numpy(np.expand_dims(input, 0).copy()).float()
+        mean = mean_img[init_h:end_h, init_w:end_w]
+        mean = np.expand_dims(mean, axis=0).repeat(input.shape[0], axis=0)
+
+        input = np.concatenate((
+            np.expand_dims(input, axis=0),
+            np.expand_dims(mean, axis=0)
+        ), axis=0)
+        input = torch.from_numpy(input.copy()).float()
+
+        # input = torch.from_numpy(np.expand_dims(input, 0).copy()).float()
         target = torch.from_numpy(np.expand_dims(target, 0).copy()).float()
         return input, target
 
@@ -116,10 +127,11 @@ class testset(Dataset):
 
     """
 
-    def __init__(self, name_list, coordinate_list, noise_img):
+    def __init__(self, name_list, coordinate_list, noise_img, mean_img):
         self.name_list = name_list
         self.coordinate_list = coordinate_list
         self.noise_img = noise_img
+        self.mean_img = mean_img
 
     def __getitem__(self, index):
         """
@@ -138,8 +150,11 @@ class testset(Dataset):
         init_s = single_coordinate['init_s']
         end_s = single_coordinate['end_s']
         noise_patch = self.noise_img[init_s:end_s, init_h:end_h, init_w:end_w]
+        mean_patch = self.mean_img[init_h:end_h, init_w:end_w]
+        mean_patch = np.expand_dims(mean_patch, axis=0).repeat(noise_patch.shape[0], axis=0)
         noise_patch = torch.from_numpy(np.expand_dims(noise_patch, 0)).float()
-        return noise_patch, single_coordinate
+        mean_patch = torch.from_numpy(np.expand_dims(mean_patch, 0)).float()
+        return noise_patch, single_coordinate, mean_patch
 
     def __len__(self):
         return len(self.name_list)
