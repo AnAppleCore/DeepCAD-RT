@@ -13,6 +13,7 @@ import datetime
 from .data_process import test_preprocess_chooseOne, testset, multibatch_test_save, singlebatch_test_save
 from skimage import io
 from deepcad.movie_display import test_img_display
+from .ssr import generate_mask
 
 
 class testing_class():
@@ -52,6 +53,8 @@ class testing_class():
         self.visualize_images_per_epoch = False
         self.colab_display = False
         self.result_display = ''
+        self.ss_stride = 10
+        self.mask_type = 'rectangle'
         self.set_params(params_dict)
 
 
@@ -229,6 +232,8 @@ class testing_class():
                 time_start = time.time()
                 denoise_img = np.zeros(noise_img.shape)
                 input_img = np.zeros(noise_img.shape)
+                mask_img = generate_mask(noise_img.shape,ss_stride=self.ss_stride, mask_type=self.mask_type)
+                noise_img = noise_img * mask_img
 
                 test_data = testset(name_list, coordinate_list, noise_img)
                 testloader = DataLoader(test_data, batch_size=self.batch_size, shuffle=False,

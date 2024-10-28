@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 import time
 import datetime
 from .data_process import trainset, test_preprocess_chooseOne, testset, multibatch_test_save, singlebatch_test_save
+from .ssr import generate_mask
 from skimage import io
 from .movie_display import test_img_display,display_img
 
@@ -65,6 +66,8 @@ class training_class():
         self.save_test_images_per_epoch = False
         self.colab_display = False
         self.result_display = ''
+        self.ss_stride = 10
+        self.mask_type = 'rectangle'
         self.set_params(params_dict)
     def run(self):
         """
@@ -170,6 +173,7 @@ class training_class():
         self.coordinate_list = {}
         self.stack_index = []
         self.noise_im_all = []
+        self.mask_im_all = []
         ind = 0
         print('\033[1;31mImage list for training -----> \033[0m')
         self.stack_num = len(list(os.walk(self.datasets_path, topdown=False))[-1][-1])
@@ -192,8 +196,10 @@ class training_class():
             # Minus mean before training
             noise_im = noise_im.astype(np.float32)/self.scale_factor
             noise_im = noise_im-noise_im.mean()
-
             self.noise_im_all.append(noise_im)
+            
+            mask_im = generate_mask(noise_im.shape, ss_stride=self.ss_stride, mask_type=self.mask_type)
+            self.mask_im_all.append(mask_im)
             patch_t2 = self.patch_t * 2
             for x in range(0, int((self.whole_y - self.patch_y + self.gap_y) / self.gap_y)):
                 for y in range(0, int((self.whole_x - self.patch_x + self.gap_x) / self.gap_x)):
@@ -280,7 +286,7 @@ class training_class():
         L1_pixelwise.cuda()
 
         for epoch in range(0, self.n_epochs):
-            train_data = trainset(self.name_list, self.coordinate_list, self.noise_im_all, self.stack_index)
+            train_data = trainset(self.name_list, self.coordinate_list, self.noise_im_all, self.stack_index, self.mask_im_all)
             trainloader = DataLoader(train_data, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
             for iteration, (input, target) in enumerate(trainloader):
                 # The input volume and corresponding target volume from data loader to train the deep neural network
@@ -383,6 +389,8 @@ class training_class():
         time_start = time.time()
         denoise_img = np.zeros(noise_img.shape)
         input_img = np.zeros(noise_img.shape)
+        mask_img = generate_mask(noise_img.shape,ss_stride=self.ss_stride, mask_type=self.mask_type)
+        noise_img = noise_img * mask_img
         test_data = testset(name_list, coordinate_list, noise_img)
         testloader = DataLoader(test_data, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
         for iteration, (noise_patch, single_coordinate) in enumerate(testloader):

@@ -2,10 +2,10 @@ from deepcad.train_collection import training_class
 from deepcad.movie_display import display
 from deepcad.utils import get_first_filename,download_demo
 
-datasets_path='/data/yanhongwei/SIM/noisy/valid'
+datasets_path='/data/yanhongwei/SIM/noisy/train'
 
 n_epochs = 10               # the number of training epochs
-GPU = '0'                   # the index of GPU used for computation (e.g. '0', '0,1', '0,1,2')
+GPU = '1'                   # the index of GPU used for computation (e.g. '0', '0,1', '0,1,2')
 train_datasets_size = 6000  # dataset size for training (the number of patches)
 patch_xy = 150              # the width and height of 3D patches
 patch_t = 150               # the time dimension of 3D patches
@@ -18,15 +18,6 @@ save_test_images_per_epoch = False  # choose whether to save inference image aft
 
 # playing the first noise movie using opencv.
 display_images = True
-
-if display_images:
-    display_filename = get_first_filename(datasets_path)
-    print('\033[1;31mDisplaying the first raw file -----> \033[0m')
-    print(display_filename)
-    display_length = 300  # the frames number of the noise movie
-    # normalize the image and display
-    # display(display_filename, display_length=display_length, norm_min_percent=1, norm_max_percent=98)
-
 
 train_dict = {
     # dataset dependent parameters
@@ -48,7 +39,9 @@ train_dict = {
     'GPU': GPU,
     'num_workers': num_workers,
     'visualize_images_per_epoch': visualize_images_per_epoch,
-    'save_test_images_per_epoch': save_test_images_per_epoch
+    'save_test_images_per_epoch': save_test_images_per_epoch,
+    'ss_stride': 10, 
+    'mask_type': 'rectangle',
 }
 
 # %%% Training preparation

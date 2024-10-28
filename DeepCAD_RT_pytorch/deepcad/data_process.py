@@ -60,11 +60,12 @@ class trainset(Dataset):
 
     """
 
-    def __init__(self, name_list, coordinate_list, noise_img_all, stack_index):
+    def __init__(self, name_list, coordinate_list, noise_img_all, stack_index, mask_img_all):
         self.name_list = name_list
         self.coordinate_list = coordinate_list
         self.noise_img_all = noise_img_all
         self.stack_index = stack_index
+        self.mask_img_all = mask_img_all
 
     def __getitem__(self, index):
         """
@@ -79,6 +80,7 @@ class trainset(Dataset):
         """
         stack_index = self.stack_index[index]
         noise_img = self.noise_img_all[stack_index]
+        mask_img = self.mask_img_all[stack_index]
         single_coordinate = self.coordinate_list[self.name_list[index]]
         init_h = single_coordinate['init_h']
         end_h = single_coordinate['end_h']
@@ -88,17 +90,20 @@ class trainset(Dataset):
         end_s = single_coordinate['end_s']
         input = noise_img[init_s:end_s:2, init_h:end_h, init_w:end_w]
         target = noise_img[init_s + 1:end_s:2, init_h:end_h, init_w:end_w]
-        p_exc = random.random()  # generate a random number determinate whether swap input and target
-        if p_exc < 0.5:
-            input, target = random_transform(input, target)
-        else:
-            temp = input
-            input = target
-            target = temp  # Swap input and target
-            input, target = random_transform(input, target)
+        # p_exc = random.random()  # generate a random number determinate whether swap input and target
+        # if p_exc < 0.5:
+        #     input, target = random_transform(input, target)
+        # else:
+        #     temp = input
+        #     input = target
+        #     target = temp  # Swap input and target
+        #     input, target = random_transform(input, target)
 
-        input = torch.from_numpy(np.expand_dims(input, 0).copy())
-        target = torch.from_numpy(np.expand_dims(target, 0).copy())
+        mask = mask_img[init_s:end_s:2, init_h:end_h, init_w:end_w]
+        input = input * mask
+
+        input = torch.from_numpy(np.expand_dims(input, 0).copy()).float()
+        target = torch.from_numpy(np.expand_dims(target, 0).copy()).float()
         return input, target
 
     def __len__(self):
@@ -133,7 +138,7 @@ class testset(Dataset):
         init_s = single_coordinate['init_s']
         end_s = single_coordinate['end_s']
         noise_patch = self.noise_img[init_s:end_s, init_h:end_h, init_w:end_w]
-        noise_patch = torch.from_numpy(np.expand_dims(noise_patch, 0))
+        noise_patch = torch.from_numpy(np.expand_dims(noise_patch, 0)).float()
         return noise_patch, single_coordinate
 
     def __len__(self):

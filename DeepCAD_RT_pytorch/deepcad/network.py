@@ -1,4 +1,4 @@
-from .model_3DUnet import UNet3D
+from .model_3DUnet import UNet3D, TimeInvariantUNet3D
 import torch.nn as nn
 
 class Network_3D_Unet(nn.Module):
@@ -14,6 +14,10 @@ class Network_3D_Unet(nn.Module):
                                      out_channels = out_channels,
                                      f_maps = f_maps, 
                                      final_sigmoid = final_sigmoid)
+            # self.Generator = TimeInvariantUNet3D( in_channels = in_channels,
+            #                                      out_channels = out_channels,
+            #                                      f_maps = f_maps, 
+            #                                      final_sigmoid = final_sigmoid)
 
     def forward(self, x):
         fake_x = self.Generator(x)
